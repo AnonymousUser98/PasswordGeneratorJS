@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Advanced Password Generator</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --muted:#9aa6b2; --accent:#60a5fa; --ok:#34d399; --danger:#fb7185;
+    --glass: rgba(255,255,255,0.03);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color-scheme: dark;
+  }
+  html,body{height:100%; margin:0; background:linear-gradient(180deg,#071127 0%, #07101a 100%); color:#e6eef6;}
+  .wrap{max-width:980px; margin:28px auto; padding:20px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); box-shadow: 0 6px 30px rgba(2,6,23,0.7);}
+  h1{margin:0 0 8px; font-size:20px; letter-spacing:0.2px;}
+  p.lead{margin:0 0 18px; color:var(--muted); font-size:13px;}
+  .grid{display:grid; gap:14px; grid-template-columns: 1fr 340px;}
+  .column{padding:12px;}
+  .card{background:var(--card); border-radius:10px; padding:14px; box-shadow: inset 0 1px rgba(255,255,255,0.02);}
+  label{display:block; font-size:13px; margin-bottom:6px;}
+  .row{display:flex; gap:10px; align-items:center;}
+  input[type="number"]{width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:var(--glass); color:inherit; font-size:14px;}
+  .checkboxes{display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;}
+  .control{display:flex; gap:8px; align-items:center;}
+  .btn{padding:8px 12px; border-radius:8px; border:0; cursor:pointer; font-weight:600;}
+  .btn-primary{background:linear-gradient(180deg,var(--accent),#3b82f6); color:white;}
+  .btn-ghost{background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted);}
+  .btn-danger{background:linear-gradient(180deg,#fb7185,#ef4444); color:white;}
+  .out{display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:10px;}
+  .password-box{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", Consolas, monospace; background:rgba(255,255,255,0.02); padding:12px; border-radius:8px; word-break:break-all; display:flex; align-items:center; gap:8px;}
+  .pw-text{flex:1; font-size:16px; letter-spacing:0.6px;}
+  .meta{font-size:13px; color:var(--muted); margin-top:8px;}
+  .meter{height:8px; background:rgba(255,255,255,0.04); border-radius:6px; overflow:hidden; margin-top:8px;}
+  .meter > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,#ef4444,#f59e0b,#34d399); transition:width .25s ease;}
+  .small{font-size:12px; color:var(--muted);}
+  .footer{margin-top:14px; display:flex; gap:8px; align-items:center; justify-content:flex-end;}
+  textarea.custom{width:100%; box-sizing:border-box; min-height:50px; padding:8px; border-radius:8px; background:var(--glass); border:1px solid rgba(255,255,255,0.02); color:inherit; resize:vertical;}
+  .chip{display:inline-block; padding:6px 8px; border-radius:999px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.02); font-size:13px;}
+  .hint{font-size:12px; color:var(--muted); margin-top:6px;}
+  .muted{color:var(--muted);}
+  .settings-list{display:grid; gap:8px;}
+  .slot{display:flex; gap:8px; align-items:center; justify-content:space-between; padding:8px; border-radius:8px; background:rgba(255,255,255,0.01);}
+  .small-input{padding:8px; border-radius:8px; width:100%; border:1px solid rgba(255,255,255,0.03); background:transparent; color:inherit;}
+  .toggle{display:inline-grid; width:44px; height:24px; background:rgba(255,255,255,0.06); border-radius:999px; align-items:center; padding:3px; cursor:pointer;}
+  .toggle > i{width:18px; height:18px; background:white; border-radius:999px; transform:translateX(0); transition:transform .18s ease;}
+  .toggle.on{background:linear-gradient(90deg,#60a5fa,#3b82f6);}
+  .hint-inline{font-size:12px; color:var(--muted); margin-left:6px;}
+  footer{margin-top:20px; color:var(--muted); font-size:12px;}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} .column.right{order: -1;} }
+</style>
+</head>
+<body>
+  <div class="wrap" role="main">
+    <h1>Advanced Password Generator</h1>
+    <p class="lead">Create secure, customizable passwords. Uses cryptographically-strong randomness (Web Crypto).</p>
+
+    <div class="grid" role="region" aria-label="Password generator">
+      <div class="column">
+        <div class="card">
+          <label for="length">Password length <span class="muted">(<span id="lenVal">20</span>)</span></label>
+          <input id="length" type="range" min="4" max="128" value="20" />
+		  <input id="lengthNumber" type="number" min="4" max="128" value="20" style="width:110px;" />
+          
+
+          <hr style="border:none; height:2px;">
+
+          <label>Character groups</label>
+          <div class="checkboxes" id="groups">
+            <label><input type="checkbox" class="grp" data-key="upper" checked> Capital letters (A–Z)</label>
+            <label><input type="checkbox" class="grp" data-key="lower" checked> Lowercase (a–z)</label>
+            <label><input type="checkbox" class="grp" data-key="digits" checked> Numbers (0–9)</label>
+            <label><input type="checkbox" class="grp" data-key="special" checked> Special (!@#$...)</label>
+            <label><input type="checkbox" class="grp" data-key="brackets" checked> Brackets (()[]{}&lt;&gt;)</label>
+            <label><input type="checkbox" class="grp" data-key="custom"> Custom group</label>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label for="custom">Custom characters (used when "Custom group" is checked)</label>
+            <textarea id="custom" class="custom" placeholder="e.g. ±§♥•~_"></textarea>
+            <div class="hint">You can also type characters to <em>exclude</em> below (e.g. remove ambiguous chars not handled automatically).</div>
+          </div>
+
+          <div style="margin-top:10px;" class="settings-list">
+            <div class="slot">
+              <div>
+                <label class="small">Use only left brackets</label>
+                <div class="hint">Removes: <span class="chip"> } ] ) &gt </span></div>
+              </div>
+              <div><input type="checkbox" id="avoidAmb"></div>
+            </div>
+
+            <div class="slot">
+              <div>
+                <label class="small">Avoid lookalike characters</label>
+                <div class="hint">Removes: <span class="chip">0 O o 1 l I</span></div>
+              </div>
+              <div><input type="checkbox" id="avoidLook" ></div>
+            </div>
+
+            <div class="slot">
+              <div><label class="small">Use at least 1 char from each selected group</label></div>
+              <div><input type="checkbox" id="requireEach" checked></div>
+            </div>
+
+            <div class="slot">
+              <div><label class="small">Exclude characters (literal)</label></div>
+              <div style="width:58%;">
+                <input id="exclude" class="small-input" placeholder="Type characters to remove, e.g. 'O0' " />
+              </div>
+            </div>
+          </div>
+
+		  <div style="display:flex; gap:10px; margin-top:10px;">
+            <div style="flex:1;">
+              <label class="small muted">Generate how many?</label>
+              <select id="count" class="small-input" style="width:140px;">
+                <option>1</option><option>3</option><option>5</option><option>10</option>
+              </select>
+            </div>
+          </div>
+		  
+          <div class="out">
+            <div style="display:flex; gap:8px;">
+              <button id="generate" class="btn btn-primary">Generate</button>
+              <button id="copyAll" class="btn btn-ghost">Copy</button>
+              <button id="clearClipboard" class="btn btn-ghost" title="Clear clipboard (writes an empty string)">Clear Clipboard</button>
+            </div>
+            <div class="small muted" id="lastAction">Ready</div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <label class="small">Generated</label>
+            <div class="password-box" id="resultBox">
+              <div class="pw-text" id="result"> — </div>
+              <div style="display:flex; gap:6px;">
+                <button id="showHide" class="btn btn-ghost" title="Toggle show/hide">Show</button>
+                <button id="regen" class="btn btn-ghost" title="Generate again">↻</button>
+              </div>
+            </div>
+
+            <div class="meta" id="meta">
+              <div>Strength: <strong id="strength">—</strong> · Entropy: <strong id="entropy">—</strong> bits · Pool: <span id="poolSize">—</span></div>
+              <div class="meter" aria-hidden="true"><i id="meterBar"></i></div>
+              <div class="hint">Tip: enable "Require 1 from each group" to ensure composition rules for passphrases or site policies.</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <label class="small">Generated list (click to copy an entry)</label>
+            <div id="listArea" style="margin-top:8px; display:grid; gap:6px;"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="column right">
+        <div class="card">
+		
+		  <label>Quick presets</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+            <button class="btn btn-ghost" data-preset="20,upper|lower|digits|special">Standard (20)</button>
+			<button class="btn btn-ghost" data-preset="25,upper|lower|digits|special">Very secure (25)</button>
+            <button class="btn btn-ghost" data-preset="32,upper|lower|digits|special|brackets">Super secure (32)</button>
+            <button class="btn btn-ghost" data-preset="16,upper|lower|digits">Alphanumeric (16)</button>
+            <button class="btn btn-ghost" data-preset="12,upper|lower|digits">Bare minimum (12)</button>
+			<button class="btn btn-ghost" data-preset="50,upper|lower|digits|special|brackets">Overkill (50)</button>
+			<button class="btn btn-ghost" data-preset="80,upper|lower|digits|special|brackets">Super overkill (80)</button>
+			<button class="btn btn-ghost" data-preset="128,upper|lower|digits|special|brackets">Maximum (128)</button>
+          </div>
+		  
+		  <hr style="border:none;height:14px;">
+		  
+          <label>Character set preview</label>
+          <div id="preview" style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.01); min-height:20;"></div>
+          <div class="hint" style="margin-top:8px;">This would show the actual pool characters after applying your options and exclusions (if it displayed properly without any problems).</div>
+
+          <hr style="border:none;height:14px;">
+
+          <label>Entropy / cracking estimate</label>
+          <div style="margin-top:8px;">
+            <div class="small muted">Entropy (approx): <strong id="entropyVal">—</strong> bits</div>
+            <div class="small muted">Rough crack time at 10 billion attempts/second: <strong id="crackTime">—</strong></div>
+            <div class="hint" style="margin-top:8px;">Estimates are simplistic: entropy = length × log₂(pool size). They don't represent actual brute-force only attack surfaces like targeted guesses, reuse, or leaks.</div>
+          </div>
+
+          <hr style="border:none;height:14px;">
+
+          <label>Advanced</label>
+          <div style="display:grid; gap:8px;">
+            <div class="slot">
+              <div><label class="small">Seeded deterministic mode</label><div class="hint small muted">For reproducible output (not recommended for real secrets).</div></div>
+              <div><input type="checkbox" id="deterministic"></div>
+            </div>
+            <div id="seedRow" style="display:none;">
+              <input id="seedInput" class="small-input" placeholder="Enter seed phrase or hex" />
+              <div class="hint small muted">If enabled, generator will use seeded PRNG (HMAC-DRBG-like). Use only for reproducible tests, not secure usage.</div>
+            </div>
+          </div>
+
+          <footer>Local-only; nothing leaves your browser. Uses Web Crypto when available.</footer>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Advanced Password Generator
+  - Secure randomness (crypto.getRandomValues)
+  - Supports "require 1 per group"
+  - Avoid ambiguous and lookalike char filters
+  - Exclude literal chars
+  - Copy & clear clipboard
+  - Deterministic mode (not secure) basic implementation using SHA-256 HMAC-like stream (for reproducible tests)
+*/
+
+// Character groups
+const GROUPS = {
+  upper: { label: "Uppercase", chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" },
+  lower: { label: "Lowercase", chars: "abcdefghijklmnopqrstuvwxyz" },
+  digits: { label: "Digits", chars: "0123456789" },
+  special: { label: "Special", chars: "!@#$%^&*+=-_?/,.:;" },
+  brackets: { label: "Brackets", chars: "()[]{}<>" }
+};
+
+// Ambiguous and lookalike sets
+const AMBIGUOUS = new Set(["}",")","]",">"]); // Called ambiguous due to modification from original program; ChatGPT doesn't know what ambiguous means
+const LOOKALIKES = new Set(["0","O","o","1","l","I","|"]);
+
+// Elements
+const lenRange = document.getElementById('length');
+const lenNumber = document.getElementById('lengthNumber');
+const lenVal = document.getElementById('lenVal');
+const groupsCheck = document.querySelectorAll('.grp');
+const custom = document.getElementById('custom');
+const avoidAmb = document.getElementById('avoidAmb');
+const avoidLook = document.getElementById('avoidLook');
+const requireEach = document.getElementById('requireEach');
+const exclude = document.getElementById('exclude');
+const generateBtn = document.getElementById('generate');
+const result = document.getElementById('result');
+const resultBox = document.getElementById('resultBox');
+const listArea = document.getElementById('listArea');
+const copyAll = document.getElementById('copyAll');
+const clearClipboardBtn = document.getElementById('clearClipboard');
+const preview = document.getElementById('preview');
+const entropyEl = document.getElementById('entropy');
+const entropyVal = document.getElementById('entropyVal');
+const poolSizeEl = document.getElementById('poolSize');
+const meterBar = document.getElementById('meterBar');
+const strengthEl = document.getElementById('strength');
+const lastAction = document.getElementById('lastAction');
+const showHide = document.getElementById('showHide');
+const regenBtn = document.getElementById('regen');
+const countSelect = document.getElementById('count');
+const copyAllBtn = document.getElementById('copyAll');
+const lenDisplay = document.getElementById('lenVal');
+const deterministicChk = document.getElementById('deterministic');
+const seedRow = document.getElementById('seedRow');
+const seedInput = document.getElementById('seedInput');
+const presetButtons = document.querySelectorAll('[data-preset]');
+
+// Range + number synchronization
+lenRange.addEventListener('input', () => {
+  lenNumber.value = lenRange.value;
+  lenDisplay.textContent = lenRange.value;
+});
+lenNumber.addEventListener('input', () => {
+  let v = Number(lenNumber.value) || 4;
+  if(v < 4) v = 4;
+  if(v > 128) v = 128;
+  lenRange.value = v;
+  lenNumber.value = v;
+  lenDisplay.textContent = v;
+});
+
+function getSelectedGroups(){
+  const sel = {};
+  document.querySelectorAll('.grp').forEach(chk=>{
+    const key = chk.dataset.key;
+    if(chk.checked){
+      if(key === 'custom') sel['custom'] = custom.value || '';
+      else sel[key] = GROUPS[key].chars;
+    }
+  });
+  return sel;
+}
+
+function buildPool(){
+  const sel = getSelectedGroups();
+  let pool = '';
+  Object.values(sel).forEach(s => pool += s);
+  // remove duplicates
+  pool = Array.from(new Set(pool.split(''))).join('');
+  // apply avoid options
+  if(avoidAmb.checked){
+    pool = pool.split('').filter(c => !AMBIGUOUS.has(c)).join('');
+  }
+  if(avoidLook.checked){
+    pool = pool.split('').filter(c => !LOOKALIKES.has(c)).join('');
+  }
+  // apply manual exclude
+  const ex = exclude.value || '';
+  if(ex){
+    const exSet = new Set(ex.split(''));
+    pool = pool.split('').filter(c => !exSet.has(c)).join('');
+  }
+  return pool;
+}
+
+function updatePreview(){
+  const pool = buildPool();
+  // preview.textContent = pool || '(empty — no characters selected)';
+  preview.textContent = 'This broken feature is disabled.'
+  poolSizeEl.textContent = pool.length || 0;
+  updateEntropy();
+}
+
+// Entropy & crude crack time
+function updateEntropy(){
+  const pool = buildPool();
+  const L = Number(lenRange.value);
+  const poolSize = pool.length || 1;
+  const entropyBits = Math.round(L * Math.log2(poolSize) * 10) / 10;
+  entropyEl.textContent = isFinite(entropyBits) ? entropyBits : '—';
+  entropyVal.textContent = isFinite(entropyBits) ? entropyBits : '—';
+  poolSizeEl.textContent = poolSize;
+  // strength
+  let strength = 'Very weak';
+  let pct = 0;
+  if(entropyBits >= 128){ strength = 'Excellent'; pct = 100; }
+  else if(entropyBits >= 80){ strength = 'Strong'; pct = 80; }
+  else if(entropyBits >= 56){ strength = 'Moderate'; pct = 60; }
+  else if(entropyBits >= 40){ strength = 'Weak'; pct = 30; }
+  else { strength = 'Very weak'; pct = 12; }
+  strengthEl.textContent = strength;
+  meterBar.style.width = pct + '%';
+  // crack time rough estimate at 10^10 tries/sec
+  const attemptsPerSec = 1e10;
+  const combos = Math.pow(poolSize, L);
+  let seconds = combos / attemptsPerSec;
+  let crack = formatSeconds(seconds);
+  document.getElementById('crackTime').textContent = crack;
+}
+
+function formatSeconds(secs){
+  if(!isFinite(secs) || secs > 1e30) return 'practically infinite';
+  if(secs < 1) return '< 1 second';
+  const years = secs / (3600*24*365);
+  if(years > 1e6) return Math.round(years) + ' years';
+  if(years >= 1) return (years >= 10 ? Math.round(years) + ' years' : (Math.round(years*10)/10) + ' years');
+  const days = secs / (3600*24);
+  if(days >= 1) return Math.round(days) + ' days';
+  const hours = secs / 3600;
+  if(hours >= 1) return Math.round(hours) + ' hours';
+  const minutes = secs / 60;
+  if(minutes >= 1) return Math.round(minutes) + ' minutes';
+  return Math.round(secs) + ' seconds';
+}
+
+// Secure random helpers
+function secureRandomUint32(){
+  const arr = new Uint32Array(1);
+  window.crypto.getRandomValues(arr);
+  return arr[0];
+}
+function secureRandomInt(maxExclusive){
+  // generate uniform int in [0, maxExclusive)
+  if (maxExclusive <= 0) return 0;
+  const limit = Math.floor(0xFFFFFFFF / maxExclusive) * maxExclusive;
+  let r;
+  do{
+    r = secureRandomUint32();
+  } while (r >= limit);
+  return r % maxExclusive;
+}
+
+// Deterministic PRNG using SHA-256 counter (NOT cryptographically appropriate for secrets)
+async function deterministicStream(seed, nBytes){
+  // produce nBytes from repeated SHA-256 of seed||counter
+  const enc = new TextEncoder();
+  let counter = 0;
+  const buf = new Uint8Array(nBytes);
+  let pos = 0;
+  while(pos < nBytes){
+    const data = new Uint8Array([...enc.encode(seed), ...numToBytes(counter)]);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    const h = new Uint8Array(hash);
+    for(let i=0;i<h.length && pos<nBytes;i++){
+      buf[pos++] = h[i];
+    }
+    counter++;
+  }
+  return buf;
+}
+function numToBytes(n){
+  // 4 bytes little-endian
+  return [(n & 0xFF),(n>>8)&0xFF,(n>>16)&0xFF,(n>>24)&0xFF];
+}
+
+// Generate a single password
+async function generateSingle(pool, length, selectedGroups){
+  if(!pool || pool.length === 0) return '';
+  const requireEachChecked = requireEach.checked;
+  const groupsKeys = Object.keys(selectedGroups); // keys -> characters per group
+  const characters = pool.split('');
+  let chosen = [];
+
+  // If require each group, pick one from each selected group (but ensure the group's chars after filtering are non-empty)
+  if(requireEachChecked && groupsKeys.length > 0){
+    // build filtered groups (after exclusions and look/amb options)
+    const filteredGroups = {};
+    for(const k of groupsKeys){
+      let str = selectedGroups[k];
+      filteredGroups[k] = Array.from(new Set(str.split(''))).filter(c => pool.includes(c)); // only chars present in final pool
+    }
+    // if any selected group has no available chars, we can't guarantee requirement — fallback to no-guarantee
+    let impossible = false;
+    for(const k of groupsKeys){
+      if(filteredGroups[k].length === 0){
+        impossible = true;
+        break;
+      }
+    }
+    if(!impossible){
+      // choose one from each
+      for(const k of groupsKeys){
+        const arr = filteredGroups[k];
+        const idx = secureRandomInt(arr.length);
+        chosen.push(arr[idx]);
+      }
+    } else {
+      // can't satisfy, leave it (we'll warn)
+      console.warn('Cannot satisfy "require 1 from each group": some selected groups have no characters after filters.');
+    }
+  }
+
+  // remaining chars
+  const remaining = length - chosen.length;
+  if(remaining > 0){
+    // If deterministic mode, use deterministicStream
+    if(deterministicChk.checked){
+      const seed = seedInput.value || 'seed';
+      // get enough bytes
+      const bytes = await deterministicStream(seed, remaining * 4);
+      for(let i=0;i<remaining;i++){
+        const idx = (bytes[i*4] << 24) | (bytes[i*4+1] << 16) | (bytes[i*4+2] << 8) | (bytes[i*4+3]);
+        const pos = Math.abs(idx) % characters.length;
+        chosen.push(characters[pos]);
+      }
+    } else {
+      for(let i=0;i<remaining;i++){
+        const idx = secureRandomInt(characters.length);
+        chosen.push(characters[idx]);
+      }
+    }
+  }
+
+  // shuffle chosen securely
+  for(let i=chosen.length-1; i>0; i--){
+    let j;
+    if(deterministicChk.checked){
+      // pseudo-random index from deterministic stream
+      const bytes = await deterministicStream((seedInput.value||'seed') + i, 4);
+      const x = (bytes[0]<<24|bytes[1]<<16|bytes[2]<<8|bytes[3]) >>> 0;
+      j = x % (i+1);
+    } else {
+      j = secureRandomInt(i+1);
+    }
+    [chosen[i], chosen[j]] = [chosen[j], chosen[i]];
+  }
+  return chosen.join('');
+}
+
+// Generate many
+async function generateMany(){
+  const pool = buildPool();
+  const selectedGroups = getSelectedGroups();
+  // if no groups selected, alert
+  if(Object.keys(selectedGroups).length === 0){
+    lastAction.textContent = 'No groups selected';
+    return;
+  }
+  if(pool.length === 0){
+    lastAction.textContent = 'Character pool is empty (apply different options)';
+    return;
+  }
+
+  const length = Number(lenRange.value);
+  const count = Number(countSelect.value);
+  const out = [];
+  // If "requireEach" checked, ensure selectedGroups keys are those which were checked and have available chars after filters
+  const effectiveGroups = {};
+  for(const [k,v] of Object.entries(selectedGroups)){
+    // only keep groups which have at least one char in the final pool
+    if(v.split('').some(c => pool.includes(c))) effectiveGroups[k] = v;
+  }
+  if(requireEach.checked && Object.keys(effectiveGroups).length === 0){
+    // nothing to require
+    console.warn('requireEach checked but no effective groups available');
+  }
+
+  for(let i=0;i<count;i++){
+    const p = await generateSingle(pool, length, effectiveGroups);
+    out.push(p);
+  }
+  displayResults(out);
+  lastAction.textContent = `Generated ${out.length} password(s)`;
+}
+
+// Display results list and first result
+function displayResults(arr){
+  listArea.innerHTML = '';
+  if(arr.length === 0) { result.textContent = '—'; return; }
+  // show first
+  result.textContent = arr[0];
+  // create list items
+  arr.forEach((s, idx) => {
+    const el = document.createElement('div');
+    el.setAttribute('tabindex','0');
+    el.style.cursor = 'pointer';
+    el.style.padding = '8px';
+    el.style.borderRadius = '8px';
+    el.style.background = 'rgba(255,255,255,0.01)';
+    el.style.fontFamily = 'ui-monospace, monospace';
+    el.textContent = s;
+    el.title = 'Click to copy';
+    el.addEventListener('click', async ()=> {
+      try{
+        await navigator.clipboard.writeText(s);
+        lastAction.textContent = 'Copied entry to clipboard';
+      }catch(e){
+        fallbackCopy(s);
+        lastAction.textContent = 'Copied (fallback)';
+      }
+    });
+    el.addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Enter' || ev.key === ' ') el.click();
+    });
+    listArea.appendChild(el);
+  });
+}
+
+// Copy currently shown result
+async function copyDisplayed(){
+  const txt = result.textContent || '';
+  if(!txt) return;
+  try{
+    await navigator.clipboard.writeText(txt);
+    lastAction.textContent = 'Copied password to clipboard';
+  }catch(e){
+    fallbackCopy(txt);
+    lastAction.textContent = 'Copied (fallback)';
+  }
+}
+
+// Fallback copy (temporary textarea)
+function fallbackCopy(text){
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch(e){}
+  ta.remove();
+}
+
+// Clear clipboard (writes empty string). May require permission on some browsers.
+async function clearClipboard(){
+  try{
+    await navigator.clipboard.writeText('');
+    lastAction.textContent = 'Clipboard cleared';
+  }catch(e){
+    // fallback attempt
+    try{
+      fallbackCopy('');
+      lastAction.textContent = 'Clipboard cleared (fallback)';
+    }catch(err){
+      lastAction.textContent = 'Unable to clear clipboard';
+    }
+  }
+}
+
+// Toggle show/hide
+let masked = false;
+showHide.addEventListener('click', ()=>{
+  masked = !masked;
+  if(masked){
+    // mask except keep length
+    const t = result.textContent || '';
+    result.textContent = '•'.repeat(Math.max(6, t.length));
+    showHide.textContent = 'Show';
+  } else {
+    // reveal first list item
+    const first = listArea.firstChild;
+    if(first) result.textContent = first.textContent;
+    showHide.textContent = 'Hide';
+  }
+});
+
+// regenerate current config
+regenBtn.addEventListener('click', ()=> generateMany());
+
+// buttons
+generateBtn.addEventListener('click', async ()=> {
+  await generateMany();
+});
+copyAll.addEventListener('click', async ()=> {
+  // copy current list as newline-separated
+  const items = Array.from(listArea.childNodes).map(n=>n.textContent).filter(Boolean);
+  if(items.length === 0 && result.textContent && result.textContent !== '—') items.push(result.textContent);
+  if(items.length === 0) { lastAction.textContent = 'Nothing to copy'; return; }
+  const text = items.join('\n');
+  try{
+    await navigator.clipboard.writeText(text);
+    lastAction.textContent = 'Copied list to clipboard';
+  }catch(e){
+    fallbackCopy(text);
+    lastAction.textContent = 'Copied list (fallback)';
+  }
+});
+clearClipboardBtn.addEventListener('click', clearClipboard);
+
+// Live preview updates
+document.querySelectorAll('input, textarea, select').forEach(el=>{
+  el.addEventListener('input', updatePreview);
+  el.addEventListener('change', updatePreview);
+});
+
+// presets
+presetButtons.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const data = btn.dataset.preset.split(',');
+    const L = Number(data[0]);
+    const groups = (data[1]||'').split('|');
+    lenRange.value = L;
+    lenNumber.value = L;
+    lenDisplay.textContent = L;
+    document.querySelectorAll('.grp').forEach(chk=>{
+      const k = chk.dataset.key;
+      chk.checked = groups.includes(k);
+    });
+    // ensure custom textarea preserved
+    updatePreview();
+  });
+});
+
+// deterministic mode toggle
+deterministicChk.addEventListener('change', ()=>{
+  seedRow.style.display = deterministicChk.checked ? 'block' : 'none';
+});
+
+// initial update
+updatePreview();
+
+// Utility: when options remove characters from a selected group, warn
+function validateRequireEach(){
+  if(!requireEach.checked) return;
+  const sel = getSelectedGroups();
+  const pool = buildPool();
+  for(const k in sel){
+    const chars = Array.from(new Set(sel[k].split(''))).filter(c=>pool.includes(c));
+    if(chars.length === 0){
+      // show a small non-blocking message
+      lastAction.textContent = `Warning: selected group "${k}" has no available characters after filters.`;
+      return;
+    }
+  }
+  lastAction.textContent = 'Ready';
+}
+document.querySelectorAll('.grp, #avoidAmb, #avoidLook, #exclude, #custom').forEach(el=>{
+  el.addEventListener('change', validateRequireEach);
+  el.addEventListener('input', validateRequireEach);
+});
+
+// copy on first list click handler already set in displayResults
+
+// Accessibility: keyboard for length slider via number field is supported
+
+// initial generate for convenience
+generateMany();
+
+</script>
+</body>
+</html>
